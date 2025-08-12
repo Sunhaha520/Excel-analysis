@@ -86,7 +86,7 @@ export default function DataVisualization({ data, fileType }: DataVisualizationP
       if (groupByColumn && groupByColumn !== xAxisColumn) {
         // 分组数据处理
         const groupIndex = headers.indexOf(groupByColumn)
-        const groupedData: { [key: string]: { [key: string]: number[] } } = {}
+        const groupedData: { [xKey: string]: { [groupKey: string]: { [yCol: string]: number[] } } } = {}
         
         rows.forEach((row: any) => {
           const xValue = Array.isArray(row) ? row[xIndex] : row[xAxisColumn]
@@ -95,11 +95,11 @@ export default function DataVisualization({ data, fileType }: DataVisualizationP
           const groupKey = groupValue?.toString() || 'Unknown'
           
           if (!groupedData[xKey]) groupedData[xKey] = {}
-          if (!groupedData[xKey][groupKey]) groupedData[xKey][groupKey] = []
+          if (!groupedData[xKey][groupKey]) groupedData[xKey][groupKey] = {}
           
-          yAxisColumns.forEach(yCol => {
+          yAxisColumns.forEach((yCol: string) => {
             const yIndex = headers.indexOf(yCol)
-            const yValue = Array.isArray(row) ? row[yIndex] : row[yCol]
+            const yValue = Array.isArray(row) ? row[yIndex] : (row as Record<string, any>)[yCol]
             if (!groupedData[xKey][groupKey][yCol]) groupedData[xKey][groupKey][yCol] = []
             groupedData[xKey][groupKey][yCol].push(Number(yValue) || 0)
           })
@@ -108,13 +108,14 @@ export default function DataVisualization({ data, fileType }: DataVisualizationP
         chartData = Object.entries(groupedData).map(([xKey, groups]) => {
           const item: any = { name: xKey }
           Object.entries(groups).forEach(([groupKey, values]) => {
-            yAxisColumns.forEach(yCol => {
-              const sum = values[yCol]?.reduce((a: number, b: number) => a + b, 0) || 0
-              const avg = values[yCol]?.length ? sum / values[yCol].length : 0
+            yAxisColumns.forEach((yCol: string) => {
+              const arr = (values as Record<string, number[]>)[yCol] || []
+              const sum = arr.reduce((a: number, b: number) => a + b, 0)
+              const avg = arr.length ? sum / arr.length : 0
               item[`${groupKey}_${yCol}`] = avg
             })
-      })
-      return item
+          })
+          return item
         }).slice(0, 50)
       } else {
         // 单变量或多变量数据处理
